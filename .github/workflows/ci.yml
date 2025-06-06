@@ -1,0 +1,101 @@
+# **BeaverOS: Continuous Integration Workflow**
+
+name: CI Build & Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # --- Backend Services (Python/FastAPI) CI ---
+  # Example for 'auth-user-service'. This job can be duplicated for other services.
+  python_service_ci:
+    name: Python Service CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/auth-user-service # Adjust to the specific service path
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # Specify your Python version
+
+      - name: Install Poetry (if using poetry)
+        run: pip install poetry
+
+      - name: Install Dependencies
+        run: poetry install --no-root # Or 'pip install -r requirements.txt' if you prefer pip
+
+      - name: Run Linters (e.g., Flake8, Black)
+        run: |
+          poetry run flake8 src/ # Adjust linting commands as needed
+          poetry run black src/ --check
+          # You can add more linters or static analysis tools here
+
+      - name: Run Tests
+        run: poetry run pytest # Adjust your test command here
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/testdb" # Mock or containerize DB for tests
+
+  # --- Admin Web Panel (React/Next.js) CI ---
+  admin_web_panel_ci:
+    name: Admin Web Panel CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/admin-web-panel # Path to your admin web panel
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # Specify your Node.js version
+          cache: 'npm' # Or 'yarn' if you use yarn
+
+      - name: Install Dependencies
+        run: npm install # Or 'yarn install'
+
+      - name: Run Linters
+        run: npm run lint # Adjust your lint command
+
+      - name: Run Tests
+        run: npm test -- --watchAll=false # Adjust your test command
+
+      - name: Build Project
+        run: npm run build # Command to create production build
+
+  # --- Desktop App (C++/Qt) CI ---
+  desktop_app_ci:
+    name: Desktop App CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/desktop-app # Path to your desktop app
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies (e.g., Qt, CMake)
+        # This part can be complex and might require custom setup scripts or Docker images
+        # For simplicity, we'll install basic build tools. For Qt, consider a specialized action or pre-built image.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake qtbase5-dev libqt5charts5-dev # Example for Qt5 on Ubuntu
+
+      - name: Configure Build (CMake)
+        run: cmake -B build
+
+      - name: Build Project
+        run: cmake --build build --config Release
+        # Add a step to run C++ tests if you have them configured, e.g., 'cd build && ctest'
+
