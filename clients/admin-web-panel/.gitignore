@@ -1,0 +1,23 @@
+# Ignorar Node modules
+node_modules/
+
+# Ignorar Next.js build output
+.next/
+out/
+build/
+
+# Ignorar variables de entorno para este subproyecto (aunque ya están en el .gitignore raíz)
+.env
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# Archivos de registro
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Dependencias nativas de Node.js que pueden ser grandes o específicas de la plataforma
+*.node
