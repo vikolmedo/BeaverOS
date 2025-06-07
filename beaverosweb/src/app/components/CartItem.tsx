@@ -1,5 +1,5 @@
 // src/app/components/CartItem.tsx
-'use client'; // Ensure this component is client-side rendered for onClick
+'use client';
 import React from 'react';
 import Image from 'next/image';
 import { Product } from '../data/products';
@@ -68,7 +68,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, onIncrease, onDecrease, onRem
           className="text-error hover:text-red-700 ml-2 p-1 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
           title="Remove Item"
         >
-          &times; {/* HTML entity for multiplication sign / close button */}
+          &times;
         </button>
       </div>
     </div>

@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         ${product.price.toFixed(2)}
       </p>
 
-      {/* Add to Cart Button - CHANGED TEXT COLOR TO text-beaverNeutral-dark */}
+      {/* Add to Cart Button */}
       <button
         type="button"
         onClick={() => onAddToCart(product)}

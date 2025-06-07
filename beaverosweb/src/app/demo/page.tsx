@@ -72,7 +72,7 @@ export default function DemoPage() {
         </div>
       </header>
 
-      {/* Message Box - No changes needed, already well-styled */}
+      {/* Message Box */}
       {message && (
         <div
           className={`fixed top-4 left-1/2 -translate-x-1/2 p-3 rounded-lg shadow-lg text-white font-semibold z-50

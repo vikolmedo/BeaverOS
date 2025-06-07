@@ -1,5 +1,5 @@
 // src/app/components/ProductGrid.tsx
-'use client'; // Ensure this component is client-side rendered
+'use client';
 import React from 'react';
 import ProductCard from './ProductCard';
 import { products, Product } from '../data/products';
