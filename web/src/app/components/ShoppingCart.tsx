@@ -1,7 +1,7 @@
-// src/app/components/ShoppingCart.tsx
-'use client';
+// web/src/app/components/ShoppingCart.tsx
 import React from 'react';
-import CartItem, { CartItemType } from './CartItem';
+import { CartItemType } from '../types/pos';
+import CartItem from './CartItem';
 
 interface ShoppingCartProps {
   cart: CartItemType[];
@@ -9,6 +9,7 @@ interface ShoppingCartProps {
   onDecreaseQuantity: (productId: string) => void;
   onRemoveItem: (productId: string) => void;
   onCheckout: () => void;
+  onClearCart: () => void; // New prop for clearing the cart
 }
 
 const ShoppingCart: React.FC<ShoppingCartProps> = ({
@@ -17,49 +18,61 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({
   onDecreaseQuantity,
   onRemoveItem,
   onCheckout,
+  onClearCart, // Destructure new prop
 }) => {
   const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col h-full">
-      <h2 className="text-2xl font-bold text-beaverNeutral-dark mb-4 border-b pb-2 border-beaverNeutral-light">
-        Shopping Cart
-      </h2>
+    <div className="bg-white p-6 rounded-xl shadow-lg flex flex-col h-full border border-gray-100">
+      <h2 className="text-3xl font-extrabold text-beaverNeutral-dark mb-6 text-center">Shopping Cart</h2>
 
-      {cart.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-grow p-4 text-beaverNeutral-dark opacity-75 mt-8">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 mb-4 text-beaverNeutral">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.023.835l.187 1.116h9.284c.809 0 1.5.558 1.673 1.342l.7.791c.81 1.144 1.237 2.536.634 4.06-1.079 2.731-2.914 5.067-5.281 6.347-1.579.853-3.149 1.485-5.014 1.485H6.75a1.5 1.5 0 0 1-1.5-1.5V15.75m0 0v-3.675A1.5 1.5 0 0 1 6.75 10.5h10.395a2.25 2.25 0 0 0 1.636-3.722L17.163 4.417c-.12-.47-.574-.803-1.092-.803H5.252M6.75 15.75H5.25C3.475 15.75 2 14.275 2 12.5V7.5A2.25 2.25 0 0 1 4.25 5.25h13.5a2.25 2.25 0 0 1 2.25 2.25v2.25m-10.5 6.75H4.5M7.5 15.75v-1.5m6.75 1.5v-1.5" />
-          </svg>
-          <p className="text-xl font-semibold mb-2">Your cart is empty!</p>
-          <p className="text-beaverNeutral">Add some products from the left to get started.</p>
-        </div>
-      ) : (
-        <div className="flex-grow overflow-y-auto mb-4 -mr-4 pr-4">
-          {cart.map((item) => (
-            <CartItem
-              key={item.product.id}
-              item={item}
-              onIncrease={onIncreaseQuantity}
-              onDecrease={onDecreaseQuantity}
-              onRemove={onRemoveItem}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex-grow overflow-y-auto pr-2">
+        {cart.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
+            <span role="img" aria-label="empty cart" className="text-7xl mb-4 opacity-70">🛒</span>
+            <p className="text-xl font-semibold text-center text-gray-600 mb-2">Your cart is empty!</p>
+            <p className="text-sm text-center text-gray-500">Add some delicious products from the left to get started.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {cart.map((item) => (
+              <CartItem
+                key={item.product.id}
+                item={item}
+                onIncreaseQuantity={onIncreaseQuantity}
+                onDecreaseQuantity={onDecreaseQuantity}
+                onRemoveItem={onRemoveItem}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-      <div className="border-t pt-4 border-beaverNeutral-light mt-auto">
-        <div className="flex justify-between items-center text-beaverNeutral-dark text-xl font-bold mb-4">
-          <span>Total:</span>
-          <span>${total.toFixed(2)}</span>
+      <div className="mt-6 pt-4 border-t-2 border-dashed border-gray-200">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-2xl font-bold text-beaverNeutral-dark">Total:</span>
+          <span className="text-3xl font-extrabold text-beaverBlue">${total.toFixed(2)}</span>
         </div>
-        <button
-          type="button"
-          onClick={onCheckout}
-          className="w-full bg-success hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-colors text-lg cursor-pointer"
-        >
-          Checkout (Simulated)
-        </button>
+        <div className="flex space-x-4"> {/* Added a flex container for the buttons */}
+          <button
+            onClick={onClearCart} // Call onClearCart when clicked
+            disabled={cart.length === 0}
+            className={`flex-1 py-4 rounded-xl font-extrabold text-white transition-all duration-300 shadow-lg transform hover:scale-105
+              ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-error hover:bg-red-700'}
+            `}
+          >
+            Clear Cart
+          </button>
+          <button
+            onClick={onCheckout}
+            disabled={cart.length === 0}
+            className={`flex-1 py-4 rounded-xl font-extrabold text-white transition-all duration-300 shadow-lg transform hover:scale-105
+              ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-success hover:bg-green-700'}
+            `}
+          >
+            Checkout (Simulated)
+          </button>
+        </div>
       </div>
     </div>
   );

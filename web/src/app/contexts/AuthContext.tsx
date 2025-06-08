@@ -13,7 +13,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { initializeApp, FirebaseApp } from "firebase/app";
+import { initializeApp, FirebaseApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
   User,
@@ -23,6 +23,7 @@ import {
   Auth,
 } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
+import { createUserWithEmailAndPassword } from "firebase/auth"; // Import createUserWithEmailAndPassword
 
 // Define Firebase environment variables
 const firebaseConfig = {
@@ -39,26 +40,27 @@ let app: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
 let dbInstance: Firestore | undefined;
 
-// Initialize Firebase only once
-if (typeof window !== "undefined" && !app) {
-  try {
-    app = initializeApp(firebaseConfig);
-    authInstance = getAuth(app);
-    dbInstance = getFirestore(app);
-    console.log("Firebase initialized successfully in AuthContext.");
-  } catch (error: any) {
-    // Handle the "already-exists" error gracefully during hot-reloads
-    // In development, this can fire multiple times, but we only care about the first init.
-    if (!error.code || error.code !== "app/duplicate-app") {
+// Initialize Firebase only once, robustly check for existing app
+if (typeof window !== "undefined") {
+  // Ensure this runs only on the client-side
+  if (!getApps().length) {
+    // Only initialize if no app exists
+    try {
+      app = initializeApp(firebaseConfig);
+      authInstance = getAuth(app);
+      dbInstance = getFirestore(app);
+      console.log("Firebase initialized successfully in AuthContext.");
+    } catch (error: any) {
       console.error("Firebase initialization error in AuthContext:", error);
     }
-    // If it's a duplicate-app error, it means it's already initialized, so we can ignore.
-    // For other errors, ensure instances are cleared.
-    if (error.code && error.code !== "app/duplicate-app") {
-      app = undefined;
-      authInstance = undefined;
-      dbInstance = undefined;
-    }
+  } else {
+    // If app already exists, get its instances
+    app = getApp();
+    authInstance = getAuth(app);
+    dbInstance = getFirestore(app);
+    console.log(
+      "Firebase already initialized, retrieved existing app instances."
+    );
   }
 }
 
@@ -71,6 +73,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  registerUser: (email: string, password: string) => Promise<void>; // Added registerUser to type
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -103,6 +106,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
+      if (user) {
+        console.log("AuthContext: Auth State Changed - User is:", user.uid);
+      } else {
+        console.log("AuthContext: Auth State Changed - No user is signed in.");
+      }
     });
 
     return () => unsubscribe();
@@ -118,11 +126,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await firebaseSignOut(auth);
   };
 
+  const registerUser = async (email: string, password: string) => {
+    // Implemented registerUser
+    if (!auth) throw new Error("Firebase Auth is not initialized.");
+    await createUserWithEmailAndPassword(auth, email, password);
+  };
+
   const value = {
     currentUser,
     loading,
     signIn,
     signOut,
+    registerUser, // Provided registerUser in the context value
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

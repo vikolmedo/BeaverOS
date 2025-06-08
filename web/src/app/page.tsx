@@ -1,129 +1,185 @@
 // web/src/app/page.tsx
-'use client'; // This component will be a client component for interactivity
+"use client"; // This component uses client-side features like useState, useEffect, etc.
 
-import Link from 'next/link'; // Import Link for client-side navigation
-import Image from 'next/image'; // Import Image for optimized images (if needed later)
+import Link from "next/link"; // Import Link for client-side navigation
+import React from "react"; // Import React as it's a React component
 
-export default function LandingPage() {
+export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-beaverBlue-dark to-beaverBlue flex flex-col justify-between text-white font-sans antialiased">
-      {/* Header */}
-      <header className="p-6 md:p-8 flex justify-between items-center z-10">
-        <div className="text-2xl font-bold">BeaverOS</div>
-        <nav>
-          <ul className="flex space-x-6">
-            <li><Link href="#features" className="hover:text-beaverBlue-light transition-colors">Features</Link></li>
-            <li><Link href="#about" className="hover:text-beaverBlue-light transition-colors">About Us</Link></li>
-            <li><Link href="#contact" className="hover:text-beaverBlue-light transition-colors">Contact</Link></li>
-            <li><Link href="/login" className="bg-white text-beaverBlue-dark px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-md">Login</Link></li>
-          </ul>
+    <div className="min-h-screen bg-beaverNeutral-light font-sans text-beaverNeutral-dark">
+      {/* Header Section */}
+      <header className="py-6 px-4 md:px-8 bg-white shadow-md rounded-b-lg">
+        <nav className="container mx-auto flex justify-between items-center">
+          <Link
+            href="/"
+            className="text-2xl font-bold text-beaverBlue-dark hover:text-beaverBlue transition-colors"
+          >
+            BeaverOS
+          </Link>
+          <div className="space-x-4">
+            <a
+              href="#features"
+              className="text-beaverNeutral-dark hover:text-beaverBlue transition-colors"
+            >
+              Features
+            </a>
+            <a
+              href="#about"
+              className="text-beaverNeutral-dark hover:text-beaverBlue transition-colors"
+            >
+              About
+            </a>
+            <a
+              href="#contact"
+              className="text-beaverNeutral-dark hover:text-beaverBlue transition-colors"
+            >
+              Contact
+            </a>
+            {/* Link to the Admin Dashboard (now at /dashboard) */}
+            <Link
+              href="/dashboard"
+              className="bg-beaverBlue text-white px-4 py-2 rounded-lg font-semibold hover:bg-beaverBlue-dark transition-colors shadow-md"
+            >
+              Admin Login
+            </Link>
+          </div>
         </nav>
       </header>
 
       {/* Hero Section */}
-      <section className="relative flex-grow flex items-center justify-center p-8 text-center overflow-hidden">
-        {/* Background Overlay for effect */}
-        <div className="absolute inset-0 bg-black opacity-20"></div>
-        {/* Abstract Background Shapes/Graphics (using Tailwind classes for simplicity) */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-beaverBlue-light rounded-full opacity-10 blur-3xl animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-beaverNeutral rounded-full opacity-10 blur-3xl animate-blob animation-delay-4000"></div>
-        <div className="absolute top-1/2 left-1/3 w-72 h-72 bg-beaverBlue-dark rounded-full opacity-10 blur-3xl animate-blob animation-delay-6000"></div>
-
-
-        <div className="relative z-10 max-w-4xl">
-          <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6 animate-fade-in">
+      <section className="relative bg-beaverBlue py-20 md:py-32 text-center text-white overflow-hidden rounded-lg shadow-xl mx-auto mt-8 max-w-6xl">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-4 drop-shadow-lg">
             BeaverOS: Build Your Business, Your Way.
           </h1>
-          <p className="text-xl md:text-2xl mb-8 animate-fade-in-delay-300">
-            The open-source, modular POS and ERP solution designed for your growth.
+          <p className="text-lg md:text-xl mb-8 opacity-90 max-w-3xl mx-auto">
+            The open-source, modular Point-of-Sale (POS) and Enterprise Resource
+            Planning (ERP) solution designed for growth.
           </p>
-          <div className="flex justify-center space-x-4 animate-fade-in-delay-600">
-            <Link href="https://github.com/vikolmedo/BeaverOS" target="_blank" rel="noopener noreferrer" className="bg-white text-beaverBlue-dark px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition duration-300 shadow-lg transform hover:scale-105">
+          <div className="space-x-4">
+            <a
+              href="https://github.com/vikolmedo/BeaverOS"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white text-beaverBlue px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-300 shadow-lg transform hover:scale-105 inline-block"
+            >
               Explore on GitHub
-            </Link>
-            <Link href="/demo" className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-beaverBlue-dark transition duration-300 shadow-lg transform hover:scale-105">
-              Try Demo
+            </a>
+            {/* "Try Demo" button now points to the new /dashboard route */}
+            <Link
+              href="/dashboard"
+              className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-beaverBlue transition duration-300 shadow-lg transform hover:scale-105 inline-block"
+            >
+              Try Admin Demo
             </Link>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="bg-beaverNeutral-light text-beaverNeutral-dark p-12 md:p-16 py-20 text-center">
-        <h2 className="text-4xl font-bold mb-12 text-beaverBlue-dark">Key Features</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">
-          <div className="bg-white p-8 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
-            <h3 className="text-2xl font-bold mb-4">Modular Design</h3>
-            <p className="text-lg">Customize BeaverOS with modules tailored to your business needs. Add only what you require, expand when ready.</p>
-          </div>
-          <div className="bg-white p-8 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
-            <h3 className="text-2xl font-bold mb-4">Comprehensive POS</h3>
-            <p className="text-lg">Streamline sales with an intuitive Point-of-Sale interface, inventory tracking, and payment processing.</p>
-          </div>
-          <div className="bg-white p-8 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
-            <h3 className="text-2xl font-bold mb-4">Integrated ERP</h3>
-            <p className="text-lg">Manage resources, track financials, and optimize operations seamlessly across your entire enterprise.</p>
-          </div>
-          <div className="bg-white p-8 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
-            <h3 className="text-2xl font-bold mb-4">Open Source Freedom</h3>
-            <p className="text-lg">Leverage the power of a community-driven platform. Inspect, modify, and contribute to its evolution.</p>
-          </div>
-          <div className="bg-white p-8 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
-            <h3 className="text-2xl font-bold mb-4">Scalable Architecture</h3>
-            <p className="text-lg">Built to grow with your business, from a single store to a multi-location enterprise.</p>
-          </div>
-          <div className="bg-white p-8 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
-            <h3 className="text-2xl font-bold mb-4">Developer Friendly</h3>
-            <p className="text-lg">Clear APIs, extensive documentation, and a welcoming community for developers to build upon.</p>
+      <section id="features" className="py-16 bg-beaverNeutral-light">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-beaverBlue-dark mb-10">
+            Powerful Features for Growing Businesses
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300">
+              <h3 className="text-xl font-semibold text-beaverBlue-dark mb-3">
+                Modular POS
+              </h3>
+              <p className="text-beaverNeutral">
+                Streamlined sales, customizable interface, fast transactions.
+              </p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300">
+              <h3 className="text-xl font-semibold text-beaverBlue-dark mb-3">
+                Comprehensive ERP
+              </h3>
+              <p className="text-beaverNeutral">
+                Manage inventory, accounting, and customer relations
+                efficiently.
+              </p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300">
+              <h3 className="text-xl font-semibold text-beaverBlue-dark mb-3">
+                Open Source & Flexible
+              </h3>
+              <p className="text-beaverNeutral">
+                Adaptable to your unique needs, built by a vibrant community.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* About Us Section */}
-      <section id="about" className="bg-beaverBlue-dark text-white p-12 md:p-16 py-20 text-center">
-        <h2 className="text-4xl font-bold mb-8">About BeaverOS</h2>
-        <p className="text-lg max-w-3xl mx-auto leading-relaxed">
-          BeaverOS is a revolutionary open-source project aimed at providing businesses with a flexible, powerful, and
-          affordable solution for Point-of-Sale and Enterprise Resource Planning. Our mission is to empower
-          companies of all sizes to manage their operations efficiently and scale without limitations.
-        </p>
-        <p className="text-lg max-w-3xl mx-auto mt-4 leading-relaxed">
-          Driven by a passionate community, we believe in transparency, collaboration, and continuous improvement. Join us
-          in building the future of business management software.
-        </p>
-        <div className="mt-12 flex justify-center space-x-6">
-          <Link href="https://github.com/vikolmedo/BeaverOS/graphs/contributors" target="_blank" rel="noopener noreferrer" className="bg-white text-beaverBlue-dark px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-300 shadow-md">
-            Meet the Team
-          </Link>
-          <Link href="https://github.com/vikolmedo/BeaverOS/wiki" target="_blank" rel="noopener noreferrer" className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-beaverBlue-dark transition duration-300 shadow-md">
-            Read Our Wiki
-          </Link>
+      {/* About Section */}
+      <section id="about" className="py-16 bg-beaverBlue-light text-white">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-10">About BeaverOS</h2>
+          <p className="text-lg mb-4 max-w-3xl mx-auto">
+            BeaverOS was founded on the principle that powerful business tools
+            should be accessible and adaptable to everyone. We believe in
+            empowering businesses of all sizes with cutting-edge, open-source
+            technology.
+          </p>
+          <p className="text-lg max-w-3xl mx-auto">
+            Our mission is to foster a community where developers and businesses
+            collaborate to build the future of retail and enterprise management.
+          </p>
         </div>
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="bg-beaverNeutral-light text-beaverNeutral-dark p-12 md:p-16 py-20 text-center">
-        <h2 className="text-4xl font-bold mb-8 text-beaverBlue-dark">Get in Touch</h2>
-        <p className="text-lg max-w-2xl mx-auto mb-8">
-          Have questions or want to learn more about BeaverOS? Reach out to us!
-        </p>
-        <div className="flex flex-col items-center space-y-4 max-w-md mx-auto">
-          <a href="mailto:contact@beaveros.com" className="bg-beaverBlue hover:bg-beaverBlue-dark text-white font-semibold py-3 px-8 rounded-lg transition-colors shadow-lg transform hover:scale-105 w-full">
-            Email Us
-          </a>
-          <a href="https://github.com/vikolmedo/BeaverOS/issues" target="_blank" rel="noopener noreferrer" className="border-2 border-beaverBlue hover:border-beaverBlue-dark text-beaverBlue hover:text-beaverBlue-dark font-semibold py-3 px-8 rounded-lg transition-colors shadow-lg transform hover:scale-105 w-full">
-            Open an Issue on GitHub
+      <section id="contact" className="py-16 bg-beaverNeutral-light">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-beaverBlue-dark mb-10">
+            Get in Touch
+          </h2>
+          <p className="text-lg mb-6 text-beaverNeutral">
+            Have questions or want to contribute? Reach out to us!
+          </p>
+          <a
+            href="mailto:contact@beaveros.com"
+            className="bg-beaverBlue text-white px-8 py-3 rounded-lg font-semibold hover:bg-beaverBlue-dark transition duration-300 shadow-lg transform hover:scale-105 inline-block"
+          >
+            Contact Us
           </a>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-beaverNeutral-dark text-white p-6 md:p-8 text-center text-sm">
-        <div className="container mx-auto">
+      <footer className="bg-beaverBlue-dark text-white py-8 text-center text-sm rounded-t-lg mt-8">
+        <div className="container mx-auto px-4">
           <p>&copy; 2025 BeaverOS. All rights reserved.</p>
           <div className="mt-4 space-x-4">
-            <Link href="/privacy" className="hover:text-beaverBlue-light transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-beaverBlue-light transition-colors">Terms of Service</Link>
+            <a
+              href="#"
+              className="hover:text-beaverLightBlue transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="#"
+              className="hover:text-beaverLightBlue transition-colors"
+            >
+              Terms of Service
+            </a>
+            <a
+              href="https://github.com/vikolmedo/BeaverOS/blob/main/CODE_OF_CONDUCT.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-beaverLightBlue transition-colors"
+            >
+              Code of Conduct
+            </a>
+            <a
+              href="https://github.com/vikolmedo/BeaverOS/blob/main/CONTRIBUTING.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-beaverLightBlue transition-colors"
+            >
+              Contribute
+            </a>
           </div>
         </div>
       </footer>

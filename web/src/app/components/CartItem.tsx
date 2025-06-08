@@ -1,74 +1,57 @@
-// src/app/components/CartItem.tsx
-'use client';
+// web/src/app/components/CartItem.tsx
 import React from 'react';
-import Image from 'next/image';
-import { Product } from '../data/products';
-
-export interface CartItemType {
-  product: Product;
-  quantity: number;
-}
+// import Image from 'next/image'; // No longer needed
+import { CartItemType } from '../types/pos';
 
 interface CartItemProps {
   item: CartItemType;
-  onIncrease: (productId: string) => void;
-  onDecrease: (productId: string) => void;
-  onRemove: (productId: string) => void;
+  onIncreaseQuantity: (productId: string) => void;
+  onDecreaseQuantity: (productId: string) => void;
+  onRemoveItem: (productId: string) => void;
 }
 
-const CartItem: React.FC<CartItemProps> = ({ item, onIncrease, onDecrease, onRemove }) => {
-  const subtotal = item.product.price * item.quantity;
-
+const CartItem: React.FC<CartItemProps> = ({ item, onIncreaseQuantity, onDecreaseQuantity, onRemoveItem }) => {
   return (
-    <div className="flex items-center bg-white p-3 rounded-lg shadow-sm mb-2 justify-between">
-      <div className="flex items-center space-x-3">
-        {/* Product Image */}
-        <div className="w-12 h-12 rounded-full overflow-hidden border border-beaverNeutral">
-          <Image
-            src={item.product.image}
-            alt={item.product.name}
-            width={48}
-            height={48}
-            className="object-cover rounded-full"
-            onError={(e) => {
-              e.currentTarget.src = `https://placehold.co/48x48/6B7280/FFFFFF?text=${item.product.name.substring(0, 3)}&format=png`
-            }}
-          />
-        </div>
-        {/* Product Name and Price */}
-        <div>
-          <p className="font-semibold text-beaverNeutral-dark">{item.product.name}</p>
-          <p className="text-sm text-beaverNeutral">${item.product.price.toFixed(2)} each</p>
+    <div className="flex items-center justify-between py-4 border-b border-gray-200 last:border-b-0 animate-fade-in-up">
+      <div className="flex items-center flex-grow">
+        {/* Display emoji directly */}
+        <span role="img" aria-label={item.product.name} className="text-3xl leading-none w-[48px] h-[48px] flex items-center justify-center rounded-full mr-3 shadow-sm bg-gray-100">
+          {item.product.icon}
+        </span>
+        {/* Removed Image component */}
+        <div className="flex flex-col flex-grow">
+          <span className="font-semibold text-beaverNeutral-dark text-lg">{item.product.name}</span>
+          <span className="text-sm text-gray-500">${item.product.price.toFixed(2)} each</span>
         </div>
       </div>
 
-      {/* Quantity Controls and Subtotal */}
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center border border-beaverNeutral-light rounded-md">
+      <div className="flex items-center flex-shrink-0 ml-4">
+        <div className="flex items-center space-x-2 text-beaverNeutral-dark">
           <button
-            type="button"
-            onClick={() => onDecrease(item.product.id)}
-            className="px-2 py-1 text-beaverNeutral-dark hover:bg-beaverNeutral-light rounded-l-md cursor-pointer"
+            onClick={() => onDecreaseQuantity(item.product.id)}
+            className="bg-beaverNeutral-light hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center text-md font-bold transition-colors shadow-sm"
           >
             -
           </button>
-          <span className="px-3 text-beaverNeutral-dark font-medium">{item.quantity}</span>
+          <span className="font-bold text-beaverNeutral-dark text-lg min-w-[25px] text-center">{item.quantity}</span>
           <button
-            type="button"
-            onClick={() => onIncrease(item.product.id)}
-            className="px-2 py-1 text-beaverNeutral-dark hover:bg-beaverNeutral-light rounded-r-md cursor-pointer"
+            onClick={() => onIncreaseQuantity(item.product.id)}
+            className="bg-beaverNeutral-light hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center text-md font-bold transition-colors shadow-sm"
           >
             +
           </button>
         </div>
-        <p className="font-bold text-beaverBlue-dark w-20 text-right">${subtotal.toFixed(2)}</p>
+        <span className="font-extrabold text-beaverBlue text-lg ml-6 text-right min-w-[70px] whitespace-nowrap">
+          ${(item.product.price * item.quantity).toFixed(2)}
+        </span>
         <button
-          type="button"
-          onClick={() => onRemove(item.product.id)}
-          className="text-error hover:text-red-700 ml-2 p-1 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
-          title="Remove Item"
+          onClick={() => onRemoveItem(item.product.id)}
+          className="text-error hover:text-red-700 ml-4 p-2 rounded-full transition-colors bg-red-100 hover:bg-red-200"
+          aria-label="Remove item"
         >
-          &times;
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1zm2 3a1 1 0 011-1h4a1 1 0 110 2H10a1 1 0 01-1-1zm0 3a1 1 0 011-1h4a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+          </svg>
         </button>
       </div>
     </div>
