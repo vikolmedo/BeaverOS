@@ -1,9 +1,9 @@
-// clients/admin-web-panel/src/app/layout.tsx
-// NOTA: La ruta real del archivo es web/src/app/layout.tsx después de la consolidación.
+// web/src/app/layout.tsx
 import './globals.css';
-import { Inter } from 'next/font/google'; // Importamos Inter de Google Fonts
+import { Inter } from 'next/font/google';
+import { AuthProvider } from './contexts/AuthContext'; // Import AuthProvider
 
-const inter = Inter({ subsets: ['latin'] }); // Configuramos la fuente Inter
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'BeaverOS Admin Panel',
@@ -17,8 +17,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* Aplicamos la clase de la fuente Inter al body */}
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {/* Wrap the entire application with AuthProvider */}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

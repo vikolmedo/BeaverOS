@@ -1,32 +1,30 @@
 /* src/app/globals.css */
 
-/* Directivas de Tailwind CSS. ¡Estas son CRÍTICAS y DEBEN ir al principio! */
+/* Tailwind CSS directives. These are CRITICAL and MUST go at the beginning! */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definición de variables CSS para colores de fondo y texto. */
-/* Usaremos estas variables para el tema claro/oscuro. */
+/* Define CSS variables for background and text colors. */
+/* We will use these variables for light/dark theme. */
 :root {
-  --background: #ffffff; /* Blanco para el modo claro */
-  --foreground: #171717; /* Gris muy oscuro para el texto en modo claro */
+  --background: #ffffff; /* White for light mode */
+  --foreground: #171717; /* Very dark gray for text in light mode */
 }
 
-/* Reglas para el modo oscuro, se activan con el media query */
+/* Rules for dark mode, activated with the media query */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a; /* Negro para el modo oscuro */
-    --foreground: #ededed; /* Gris muy claro para el texto en modo oscuro */
+    --background: #0a0a0a; /* Black for dark mode */
+    --foreground: #ededed; /* Very light gray for text in dark mode */
   }
 }
 
-/* Aplicación de las variables y la fuente al cuerpo del documento */
-/* 'Inter' se maneja mejor a través de next/font en layout.tsx. */
-/* Si la fuente Inter no carga, 'sans-serif' será la fallback. */
+/* Apply variables and font to the document body */
+/* 'Inter' font will be applied from layout.tsx. If there's an issue,
+   Arial, Helvetica, sans-serif will be the fallbacks. */
 body {
   background: var(--background);
   color: var(--foreground);
-  /* La fuente 'Inter' se aplicará desde layout.tsx. Si hay un problema,
-     Arial, Helvetica, sans-serif serán los fallbacks. */
   font-family: Arial, Helvetica, sans-serif;
 }
