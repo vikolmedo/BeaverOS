@@ -1,114 +1,253 @@
 // web/src/services/firestoreService.ts
-// Servicio para interactuar con Firebase Firestore para la gestión de productos.
-
+import { initializeApp, FirebaseApp, getApps, getApp } from 'firebase/app';
 import {
+  getAuth,
+  signInAnonymously,
+  signInWithCustomToken,
+  User,
+  Auth
+} from 'firebase/auth';
+import {
+  getFirestore,
   doc,
-  collection,
-  getDocs,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
+  onSnapshot,
+  collection,
   query,
-  where,
-  getFirestore,
+  serverTimestamp,
+  QuerySnapshot,
+  DocumentSnapshot,
+  Firestore
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
-import { AdminProduct } from '../app/data/admin-products'; // Importar la interfaz actualizada
+import { FirebaseError } from 'firebase/app';
 
-// Definición de las variables de entorno para Firebase
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+// Corrected relative paths to data interfaces
+import { AdminProduct } from '../../app/data/admin-products';
+import { Customer } from '../../app/data/customers';
 
-// Inicializar Firebase (solo una vez)
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+declare const __app_id: string;
+declare const __firebase_config: string;
+declare const __initial_auth_token: string | undefined;
 
-// Función para obtener la colección de productos de un usuario específico
-const getProductsCollection = async () => {
-  const user = auth.currentUser;
-  if (!user) {
-    console.error("No authenticated user found.");
-    throw new Error("Authentication required to access products.");
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
+
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-canvas-app';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+try {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+    console.log('FirestoreService: Initialized new Firebase app.');
+  } else {
+    app = getApp();
+    console.log('FirestoreService: Retrieved existing Firebase app instance.');
   }
-  // Ruta de la colección: /artifacts/{appId}/users/{userId}/products
-  const appId = firebaseConfig.appId;
-  const userId = user.uid;
-  return collection(db, `artifacts/<span class="math-inline">\{appId\}/users/</span>{userId}/products`);
+
+  db = getFirestore(app);
+  auth = getAuth(app);
+  console.log('FirestoreService: Initial import check - auth: initialized db: initialized');
+} catch (error) {
+  console.error('FirestoreService: Error during Firebase initialization:', error);
+  db = null as any;
+  auth = null as any;
+}
+
+const getUserId = () => {
+  if (auth && auth.currentUser) {
+    return auth.currentUser.uid;
+  }
+  console.warn("FirestoreService: Auth is not ready or user is not logged in. Using random UUID for userId.");
+  return crypto.randomUUID();
 };
 
-// Obtener todos los productos
-export const getProducts = async (): Promise<AdminProduct[]> => {
+const getCollectionPath = (collectionName: string) => {
+  const userId = getUserId();
+  const path = `artifacts/${appId}/users/${userId}/${collectionName}`;
+  console.log(`DEBUG: Final constructed Firestore collectionPath for ${collectionName}: "${path}" (Length: ${path.split('/').length} segments)`);
+  return path;
+};
+
+// --- Product Management Functions ---
+
+export const addProductToFirestore = async (newProductData: Omit<AdminProduct, 'id' | 'createdAt' | 'lastUpdated'>) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized.");
+    throw new Error("Firestore DB is not initialized.");
+  }
+  const collectionPath = getCollectionPath('products');
+  console.log(`DEBUG: Passing to collection() for addProductToFirestore: "${collectionPath}" (Length: ${collectionPath.split('/').length} segments)`);
   try {
-    const productsCollection = await getProductsCollection();
-    const q = query(productsCollection);
-    const querySnapshot = await getDocs(q);
-    const products: AdminProduct[] = [];
-    querySnapshot.forEach((doc) => {
-      products.push({ id: doc.id, ...doc.data() } as AdminProduct);
+    const docRef = await addDoc(collection(db, collectionPath), {
+      ...newProductData,
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp(),
     });
-    return products;
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    throw error;
+    console.log("Product added to Firestore:", newProductData.name);
+    return docRef.id;
+  } catch (e: any) {
+    console.error("Error adding product: ", e);
+    throw e;
   }
 };
 
-// Añadir un nuevo producto
-export const addProduct = async (product: Omit<AdminProduct, 'id' | 'createdAt' | 'lastUpdated'>): Promise<string> => {
-  try {
-    const productsCollection = await getProductsCollection();
-    const newProductRef = await addDoc(productsCollection, {
-      ...product,
-      createdAt: new Date().toISOString(), // Añadir fecha de creación
-      lastUpdated: new Date().toISOString(), // Añadir fecha de última actualización
-    });
-    return newProductRef.id;
-  } catch (error) {
-    console.error('Error adding product:', error);
-    throw error;
+export const updateProductInFirestore = async (updatedProduct: AdminProduct) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized.");
+    throw new Error("Firestore DB is not initialized.");
   }
-};
+  if (!updatedProduct.id) {
+    console.error("Product ID is required for update.");
+    throw new Error("Product ID is required for update.");
+  }
+  const collectionPath = getCollectionPath('products');
+  console.log(`DEBUG: Passing to doc() for updateProductInFirestore: Collection Path "${collectionPath}" (Length: ${collectionPath.split('/').length} segments), Document ID "${updatedProduct.id}"`);
 
-// Actualizar un producto existente
-export const updateProduct = async (product: AdminProduct): Promise<void> => {
+  const { id, ...dataToUpdate } = updatedProduct;
+
   try {
-    const productsCollection = await getProductsCollection();
-    const productRef = doc(productsCollection, product.id);
+    const productRef = doc(db, collectionPath, id);
     await updateDoc(productRef, {
-      ...product,
-      lastUpdated: new Date().toISOString(), // Actualizar fecha de última actualización
+      ...dataToUpdate,
+      lastUpdated: serverTimestamp(),
     });
-  } catch (error) {
-    console.error('Error updating product:', error);
-    throw error;
+    console.log("Product updated in Firestore:", updatedProduct.name);
+  } catch (e: any) {
+    console.error("Error updating product: ", e);
+    throw e;
   }
 };
 
-// Eliminar un producto
-export const deleteProduct = async (productId: string): Promise<void> => {
+export const deleteProductFromFirestore = async (productId: string) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized.");
+    throw new Error("Firestore DB is not initialized.");
+  }
+  const collectionPath = getCollectionPath('products');
   try {
-    const productsCollection = await getProductsCollection();
-    const productRef = doc(productsCollection, productId);
-    await deleteDoc(productRef);
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    throw error;
+    await deleteDoc(doc(db, collectionPath, productId));
+    console.log("Product deleted from Firestore:", productId);
+  } catch (e: any) {
+    console.error("Error deleting product: ", e);
+    throw e;
   }
 };
 
-// Autenticación de usuario
-export const signIn = async (email: string, password: string) => {
-  // Esta función ya está en src/services/authService.ts si lo creamos por separado,
-  // o en la página de inicio de sesión. Por simplicidad aquí solo se muestra el mock.
-  console.log(`Attempting to sign in user: ${email}`);
-  // Aquí iría la lógica real de signInWithEmailAndPassword de Firebase Auth
-  // Por ahora, solo es un placeholder ya que ya tenemos LoginPage con Firebase Auth
+export const subscribeToProducts = (callback: (products: AdminProduct[]) => void) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized. Cannot subscribe to products.");
+    return () => {};
+  }
+  const collectionPath = getCollectionPath('products');
+  const q = query(collection(db, collectionPath));
+
+  console.log(`DEBUG: Passing to collection() for subscribeToProducts: "${collectionPath}" (Length: ${collectionPath.split('/').length} segments)`);
+
+  const unsubscribe = onSnapshot(q, (querySnapshot: QuerySnapshot) => {
+    const products: AdminProduct[] = [];
+    querySnapshot.forEach((doc: DocumentSnapshot) => {
+      // CORRECTED: Place doc.id after spread to ensure it's the final 'id'
+      products.push({ ...(doc.data() as AdminProduct), id: doc.id });
+    });
+    console.log('Real-time products update from Firestore:', products);
+    callback(products);
+  }, (error: FirebaseError) => {
+    console.error("Error listening to products:", error);
+  });
+
+  return unsubscribe;
+};
+
+// --- Customer Management Functions ---
+
+export const addCustomerToFirestore = async (newCustomerData: Omit<Customer, 'id' | 'createdAt' | 'lastUpdated'>) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized.");
+    throw new Error("Firestore DB is not initialized.");
+  }
+  const collectionPath = getCollectionPath('customers');
+  console.log(`DEBUG: Passing to collection() for addCustomerToFirestore: "${collectionPath}" (Length: ${collectionPath.split('/').length} segments)`);
+  try {
+    const docRef = await addDoc(collection(db, collectionPath), {
+      ...newCustomerData,
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp(),
+    });
+    console.log("Customer added to Firestore:", newCustomerData.firstName);
+    return docRef.id;
+  } catch (e: any) {
+    console.error("Error adding customer: ", e);
+    throw e;
+  }
+};
+
+export const updateCustomerInFirestore = async (updatedCustomer: Customer) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized.");
+    throw new Error("Firestore DB is not initialized.");
+  }
+  if (!updatedCustomer.id) {
+    console.error("Customer ID is required for update.");
+    throw new Error("Customer ID is required for update.");
+  }
+  const collectionPath = getCollectionPath('customers');
+  console.log(`DEBUG: Passing to doc() for updateCustomerInFirestore: Collection Path "${collectionPath}" (Length: ${collectionPath.split('/').length} segments), Document ID "${updatedCustomer.id}"`);
+
+  const { id, ...dataToUpdate } = updatedCustomer;
+
+  try {
+    const customerRef = doc(db, collectionPath, id);
+    await updateDoc(customerRef, {
+      ...dataToUpdate,
+      lastUpdated: serverTimestamp(),
+    });
+    console.log("Customer updated in Firestore:", updatedCustomer.firstName);
+  } catch (e: any) {
+    console.error("Error saving customer: ", e);
+    throw e;
+  }
+};
+
+export const deleteCustomerFromFirestore = async (customerId: string) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized.");
+    throw new Error("Firestore DB is not initialized.");
+  }
+  const collectionPath = getCollectionPath('customers');
+  try {
+    await deleteDoc(doc(db, collectionPath, customerId));
+    console.log("Customer deleted from Firestore:", customerId);
+  } catch (e: any) {
+    console.error("Error deleting customer: ", e);
+    throw e;
+  }
+};
+
+export const subscribeToCustomers = (callback: (customers: Customer[]) => void) => {
+  if (!db) {
+    console.error("Firestore DB is not initialized. Cannot subscribe to customers.");
+    return () => {};
+  }
+  const collectionPath = getCollectionPath('customers');
+  const q = query(collection(db, collectionPath));
+
+  console.log(`DEBUG: Passing to collection() for subscribeToCustomers: "${collectionPath}" (Length: ${collectionPath.split('/').length} segments)`);
+
+  const unsubscribe = onSnapshot(q, (querySnapshot: QuerySnapshot) => {
+    const customers: Customer[] = [];
+    querySnapshot.forEach((doc: DocumentSnapshot) => {
+      // CORRECTED: Place doc.id after spread to ensure it's the final 'id'
+      customers.push({ ...(doc.data() as Customer), id: doc.id });
+    });
+    console.log('Real-time customers update from Firestore:', customers);
+    callback(customers);
+  }, (error: FirebaseError) => {
+    console.error("Error listening to customers:", error);
+  });
+
+  return unsubscribe;
 };

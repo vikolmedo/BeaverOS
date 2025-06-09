@@ -3,20 +3,21 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 import {
   subscribeToProducts,
   addProductToFirestore,
   updateProductInFirestore,
   deleteProductFromFirestore,
-} from "../../services/firestoreService"; // Corrected relative path
-import { AdminProduct, SAMPLE_ADMIN_PRODUCTS } from "../data/admin-products"; // Corrected relative path
-import ProductTable from "../components/ProductTable"; // Corrected relative path
-import ProductForm from "../components/ProductForm"; // Corrected relative path
-import MessageModal from "../components/MessageModal"; // Corrected relative path
+} from "../../services/firestoreService";
+import { AdminProduct, SAMPLE_ADMIN_PRODUCTS } from "../data/admin-products";
+import ProductTable from "../components/ProductTable";
+import ProductForm from "../components/ProductForm";
+import MessageModal from "../components/MessageModal";
 
 export default function Dashboard() {
-  const { currentUser, loading, signOut } = useAuth();
+  const { currentUser, loading, signOut, db } = useAuth(); // Correctly destructuring db
   const router = useRouter();
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,7 +40,8 @@ export default function Dashboard() {
     if (!loading) {
       if (!currentUser) {
         router.push("/login");
-      } else {
+      } else if (db) {
+        // Correctly checking for db existence before setup
         setupProductsListener();
       }
     }
@@ -50,15 +52,26 @@ export default function Dashboard() {
         unsubscribeRef.current = null;
       }
     };
-  }, [currentUser, loading, router]);
+  }, [currentUser, loading, router, db]); // Correct dependencies
 
   const setupProductsListener = async () => {
+    if (!db || !currentUser?.uid) {
+      // Correctly checking for db and currentUser.uid
+      console.warn(
+        "Firestore DB or currentUser.uid not available for product listener."
+      );
+      setProducts(SAMPLE_ADMIN_PRODUCTS);
+      return;
+    }
     try {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
-      unsubscribeRef.current = await subscribeToProducts(
-        (newProducts: AdminProduct[]) => {
+      // Correctly passing db and currentUser.uid to subscribeToProducts
+      unsubscribeRef.current = subscribeToProducts(
+        db,
+        currentUser.uid,
+        (newProducts) => {
           setProducts(newProducts);
         }
       );
@@ -85,15 +98,27 @@ export default function Dashboard() {
   const handleSaveProduct = async (
     productData: Omit<AdminProduct, "createdAt" | "lastUpdated">
   ) => {
+    if (!db || !currentUser?.uid) {
+      // Correctly checking db and currentUser.uid
+      showMessageModal(
+        "Firestore DB or user not available. Cannot save product.",
+        "error"
+      );
+      return;
+    }
     try {
       if (editingProduct) {
-        await updateProductInFirestore({
-          ...productData,
-          id: editingProduct.id,
-        });
+        // Correctly passing db and currentUser.uid to updateProductInFirestore
+        await updateProductInFirestore(
+          db,
+          currentUser.uid,
+          productData as AdminProduct
+        );
         showMessageModal("Product updated successfully!", "success");
       } else {
-        await addProductToFirestore(productData);
+        const { id, ...dataToAdd } = productData;
+        // Correctly passing db and currentUser.uid to addProductToFirestore
+        await addProductToFirestore(db, currentUser.uid, dataToAdd);
         showMessageModal("Product added successfully!", "success");
       }
       setShowProductForm(false);
@@ -118,9 +143,22 @@ export default function Dashboard() {
   };
 
   const handleDeleteProduct = async () => {
+    if (!db || !currentUser?.uid || !productToDelete) {
+      // Correctly checking db, currentUser.uid, productToDelete
+      showMessageModal(
+        "Firestore DB, user, or product to delete not available. Cannot delete product.",
+        "error"
+      );
+      return;
+    }
     if (productToDelete) {
       try {
-        await deleteProductFromFirestore(productToDelete.id);
+        // Correctly passing db and currentUser.uid to deleteProductFromFirestore
+        await deleteProductFromFirestore(
+          db,
+          currentUser.uid,
+          productToDelete.id
+        );
         showMessageModal("Product deleted successfully!", "success");
       } catch (error) {
         console.error("Error deleting product:", error);
@@ -168,22 +206,6 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-beaverNeutral-light">
-        Loading authentication...
-      </div>
-    );
-  }
-
-  if (!currentUser && !loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-beaverNeutral-light text-beaverNeutral">
-        Redirecting to login...
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-beaverNeutral-light p-8">
       <header className="flex justify-between items-center mb-6 bg-beaverBlue-dark text-white p-4 rounded-lg shadow-md">
@@ -191,6 +213,25 @@ export default function Dashboard() {
           BeaverOS Admin Dashboard
         </h1>
         <div className="flex items-center space-x-4">
+          <ul className="flex space-x-4">
+            <li>
+              <Link
+                href="/dashboard"
+                className="hover:text-beaverBlue-light transition-colors font-semibold"
+              >
+                Products
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/dashboard/customers"
+                className="hover:text-beaverBlue-light transition-colors font-semibold"
+              >
+                Customers
+              </Link>
+            </li>
+          </ul>
+
           <span className="text-sm">Welcome, {currentUser?.email}</span>
           <button
             onClick={handleLogout}

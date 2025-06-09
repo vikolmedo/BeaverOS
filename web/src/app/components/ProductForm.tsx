@@ -1,10 +1,11 @@
 // web/src/app/components/ProductForm.tsx
 import React, { useState, useEffect } from "react";
+// CORRECTED PATH: Changed '../../data/admin-products' to '../data/admin-products'
 import {
   AdminProduct,
   ProductImage,
   ProductVariant,
-} from "../../data/admin-products"; // Corrected path to data
+} from "../data/admin-products";
 
 interface ProductFormProps {
   initialProduct?: AdminProduct; // Product to edit (optional)
@@ -26,19 +27,31 @@ const ProductForm: React.FC<ProductFormProps> = ({
       description: "",
       category: "",
       price: 0,
+      costPrice: 0,
       stock: 0,
       sku: "",
-      icon: "", // Initialize icon
-      imageUrl: "", // Initialize imageUrl
+      barcode: "",
+      supplierId: "",
+      icon: "",
+      imageUrl: "",
       isActive: true,
-      images: [], // Initialize images array
-      variants: [], // Initialize variants array
+      images: [],
+      variants: [],
     }
   );
 
   useEffect(() => {
     if (initialProduct) {
-      setProduct(initialProduct);
+      setProduct({
+        ...initialProduct,
+        images: initialProduct.images || [],
+        variants: initialProduct.variants || [],
+        barcode: initialProduct.barcode || "",
+        supplierId: initialProduct.supplierId || "",
+        icon: initialProduct.icon || "",
+        imageUrl: initialProduct.imageUrl || "",
+        costPrice: initialProduct.costPrice || 0,
+      });
     }
   }, [initialProduct]);
 
@@ -48,15 +61,26 @@ const ProductForm: React.FC<ProductFormProps> = ({
     >
   ) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
-    setProduct((prevProduct) => ({
-      ...prevProduct,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : type === "number"
-          ? parseFloat(value)
-          : value,
-    }));
+
+    setProduct((prevProduct) => {
+      let newValue: string | number | boolean;
+
+      if (type === "checkbox") {
+        newValue = checked;
+      } else if (type === "number") {
+        newValue = value === "" ? 0 : parseFloat(value);
+        if (isNaN(newValue as number)) {
+          newValue = 0;
+        }
+      } else {
+        newValue = value;
+      }
+
+      return {
+        ...prevProduct,
+        [name]: newValue,
+      };
+    });
   };
 
   const handleImageChange = (
@@ -66,7 +90,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
   ) => {
     const newImages = [...(product.images || [])];
     if (field === "isThumbnail") {
-      // Ensure only one image can be a thumbnail
       newImages.forEach(
         (img, i) => (img.isThumbnail = i === index ? (value as boolean) : false)
       );
@@ -86,10 +109,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }));
   };
 
+  // FIXED: Explicitly typed parameters in filter callback
   const removeImage = (index: number) => {
     setProduct((prevProduct) => ({
       ...prevProduct,
-      images: (prevProduct.images || []).filter((_, i) => i !== index),
+      images: (prevProduct.images || []).filter(
+        (_: ProductImage, i: number) => i !== index
+      ),
     }));
   };
 
@@ -99,7 +125,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
     value: string | number
   ) => {
     const newVariants = [...(product.variants || [])];
-    (newVariants[index] as any)[field] = value;
+    if (field === "stock" && typeof value === "string") {
+      const parsedValue = value === "" ? 0 : parseFloat(value);
+      (newVariants[index] as any)[field] = isNaN(parsedValue) ? 0 : parsedValue;
+    } else {
+      (newVariants[index] as any)[field] = value;
+    }
     setProduct({ ...product, variants: newVariants });
   };
 
@@ -113,10 +144,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }));
   };
 
+  // FIXED: Explicitly typed parameters in filter callback
   const removeVariant = (index: number) => {
     setProduct((prevProduct) => ({
       ...prevProduct,
-      variants: (prevProduct.variants || []).filter((_, i) => i !== index),
+      variants: (prevProduct.variants || []).filter(
+        (_: ProductVariant, i: number) => i !== index
+      ),
     }));
   };
 
@@ -146,7 +180,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="name"
               value={product.name}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               required
             />
@@ -164,7 +197,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="category"
               value={product.category}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               required
             />
@@ -182,7 +214,24 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="price"
               value={product.price}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
+              className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
+              required
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="costPrice"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Cost Price
+            </label>
+            <input
+              type="number"
+              name="costPrice"
+              id="costPrice"
+              value={product.costPrice}
+              onChange={handleChange}
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               required
               step="0.01"
@@ -201,7 +250,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="stock"
               value={product.stock}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               required
             />
@@ -219,7 +267,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="sku"
               value={product.sku}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               required
             />
@@ -237,7 +284,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="barcode"
               value={product.barcode || ""}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
             />
           </div>
@@ -255,7 +301,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="icon"
               value={product.icon}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               maxLength={2} // Emojis are often 1 or 2 characters
               placeholder="e.g., ☕, 🥐"
@@ -275,7 +320,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               id="imageUrl"
               value={product.imageUrl || ""}
               onChange={handleChange}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
               className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               placeholder="[https://example.com/main-image.jpg](https://example.com/main-image.jpg)"
             />
@@ -294,7 +338,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
             rows={3}
             value={product.description}
             onChange={handleChange}
-            // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
             className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
             required
           ></textarea>
@@ -306,7 +349,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             type="checkbox"
             checked={product.isActive}
             onChange={handleChange}
-            className="h-4 w-4 text-beaverBlue focus:ring-beaverBlue border-gray-300 rounded" // Checkbox border kept as gray for now, common practice
+            className="h-4 w-4 text-beaverBlue focus:ring-beaverBlue border-gray-300 rounded"
           />
           <label
             htmlFor="isActive"
@@ -321,7 +364,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
           <h3 className="text-xl font-semibold text-beaverBlue-dark mb-3">
             Additional Product Images
           </h3>
-          {(product.images || []).map((image, index) => (
+          {/* FIXED: Explicitly typed parameters in map callback */}
+          {(product.images || []).map((image: ProductImage, index: number) => (
             <div
               key={image.id}
               className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3 p-3 border rounded-md bg-gray-50 items-center"
@@ -341,7 +385,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   onChange={(e) =>
                     handleImageChange(index, "url", e.target.value)
                   }
-                  // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
                   className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
                   placeholder="[https://example.com/image.jpg](https://example.com/image.jpg)"
                   required
@@ -362,7 +405,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   onChange={(e) =>
                     handleImageChange(index, "altText", e.target.value)
                   }
-                  // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
                   className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
                 />
               </div>
@@ -376,7 +418,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     onChange={(e) =>
                       handleImageChange(index, "isThumbnail", e.target.checked)
                     }
-                    className="h-4 w-4 text-beaverBlue focus:ring-beaverBlue border-gray-300 rounded" // Checkbox border kept as gray for now
+                    className="h-4 w-4 text-beaverBlue focus:ring-beaverBlue border-gray-300 rounded"
                   />
                   <label
                     htmlFor={`isThumbnail-${image.id}`}
@@ -409,86 +451,86 @@ const ProductForm: React.FC<ProductFormProps> = ({
           <h3 className="text-xl font-semibold text-beaverBlue-dark mb-3">
             Product Variants
           </h3>
-          {(product.variants || []).map((variant, index) => (
-            <div
-              key={variant.id}
-              className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3 p-3 border rounded-md bg-gray-50 items-center"
-            >
-              <div>
-                <label
-                  htmlFor={`variantName-${variant.id}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Name (e.g., Color)
-                </label>
-                <input
-                  type="text"
-                  id={`variantName-${variant.id}`}
-                  name="name"
-                  value={variant.name}
-                  onChange={(e) =>
-                    handleVariantChange(index, "name", e.target.value)
-                  }
-                  // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
-                  className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
-                  required
-                />
+          {/* FIXED: Explicitly typed parameters in map callback */}
+          {(product.variants || []).map(
+            (variant: ProductVariant, index: number) => (
+              <div
+                key={variant.id}
+                className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3 p-3 border rounded-md bg-gray-50 items-center"
+              >
+                <div>
+                  <label
+                    htmlFor={`variantName-${variant.id}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Name (e.g., Color)
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    id={`variantName-${variant.id}`}
+                    value={variant.name}
+                    onChange={(e) =>
+                      handleVariantChange(index, "name", e.target.value)
+                    }
+                    className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`variantValue-${variant.id}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Value (e.g., Red)
+                  </label>
+                  <input
+                    type="text"
+                    name="value"
+                    id={`variantValue-${variant.id}`}
+                    value={variant.value}
+                    onChange={(e) =>
+                      handleVariantChange(index, "value", e.target.value)
+                    }
+                    className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`variantStock-${variant.id}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Stock
+                  </label>
+                  <input
+                    type="number"
+                    name="stock"
+                    id={`variantStock-${variant.id}`}
+                    value={variant.stock}
+                    onChange={(e) =>
+                      handleVariantChange(
+                        index,
+                        "stock",
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
+                    required
+                  />
+                </div>
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(index)}
+                    className="text-error hover:text-error-dark text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-              <div>
-                <label
-                  htmlFor={`variantValue-${variant.id}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Value (e.g., Red)
-                </label>
-                <input
-                  type="text"
-                  id={`variantValue-${variant.id}`}
-                  name="value"
-                  value={variant.value}
-                  onChange={(e) =>
-                    handleVariantChange(index, "value", e.target.value)
-                  }
-                  // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
-                  className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`variantStock-${variant.id}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Stock
-                </label>
-                <input
-                  type="number"
-                  id={`variantStock-${variant.id}`}
-                  name="stock"
-                  value={variant.stock}
-                  onChange={(e) =>
-                    handleVariantChange(
-                      index,
-                      "stock",
-                      parseFloat(e.target.value)
-                    )
-                  }
-                  // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
-                  className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
-                  required
-                />
-              </div>
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => removeVariant(index)}
-                  className="text-error hover:text-error-dark text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          )}
           <button
             type="button"
             onClick={addVariant}
@@ -509,7 +551,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           </button>
           <button
             type="submit"
-            className="bg-beaverBlue hover:bg-beaverBlue-dark text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors shadow"
+            className="bg-beaverBlue hover:bg-beaverBlue-dark text-white font-bold py-2 px-6 rounded-lg transition-colors shadow"
           >
             {initialProduct ? "Update Product" : "Add Product"}
           </button>

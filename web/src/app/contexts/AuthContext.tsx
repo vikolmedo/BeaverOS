@@ -1,10 +1,5 @@
 // web/src/app/contexts/AuthContext.tsx
-// This file defines a React context to manage Firebase authentication state.
-// It allows any component within the application to access the authenticated user
-// and authentication functions (signIn, signOut, etc.).
-// It also now exports the initialized Firebase Auth and Firestore instances.
-
-"use client"; // Marks this file as a client component in Next.js
+"use client";
 
 import React, {
   createContext,
@@ -16,75 +11,29 @@ import React, {
 import { initializeApp, FirebaseApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
-  User,
-  signInWithEmailAndPassword,
+  signInAnonymously,
+  signInWithCustomToken,
   signOut as firebaseSignOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  User,
   onAuthStateChanged,
   Auth,
 } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth"; // Import createUserWithEmailAndPassword
-
-// Define Firebase environment variables
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
-
-// Global variables for Firebase app, auth, and db instances
-let app: FirebaseApp | undefined;
-let authInstance: Auth | undefined;
-let dbInstance: Firestore | undefined;
-
-// Initialize Firebase only once, robustly check for existing app
-if (typeof window !== "undefined") {
-  // Ensure this runs only on the client-side
-  if (!getApps().length) {
-    // Only initialize if no app exists
-    try {
-      app = initializeApp(firebaseConfig);
-      authInstance = getAuth(app);
-      dbInstance = getFirestore(app);
-      console.log("Firebase initialized successfully in AuthContext.");
-    } catch (error: any) {
-      console.error("Firebase initialization error in AuthContext:", error);
-    }
-  } else {
-    // If app already exists, get its instances
-    app = getApp();
-    authInstance = getAuth(app);
-    dbInstance = getFirestore(app);
-    console.log(
-      "Firebase already initialized, retrieved existing app instances."
-    );
-  }
-}
-
-// Export the initialized auth and db instances directly
-export const auth = authInstance;
-export const db = dbInstance;
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  db: Firestore | null;
+  auth: Auth | null;
   signOut: () => Promise<void>;
-  registerUser: (email: string, password: string) => Promise<void>; // Added registerUser to type
+  signInAnonymously: () => Promise<void>;
+  signInUser: (email: string, password: string) => Promise<User>;
+  registerUser: (email: string, password: string) => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -93,52 +42,275 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [db, setDb] = useState<Firestore | null>(null);
+  const [auth, setAuth] = useState<Auth | null>(null);
 
+  // Directly access environment variables via process.env.
+  // These are expected to be defined at build time via .env.local or similar Next.js env config.
+  const APP_ID = process.env.NEXT_PUBLIC_APP_ID || "default-canvas-app";
+  const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const FIREBASE_AUTH_DOMAIN = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const FIREBASE_STORAGE_BUCKET =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const FIREBASE_MESSAGING_SENDER_ID =
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+  const FIREBASE_APP_ID = process.env.NEXT_PUBLIC_FIREBASE_APP_ID; // This is Firebase's app ID
+  const FIREBASE_MEASUREMENT_ID =
+    process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID; // Optional
+  const INITIAL_AUTH_TOKEN = process.env.NEXT_PUBLIC_INITIAL_AUTH_TOKEN; // Optional custom auth token
+
+  // Construct Firebase config object
+  const firebaseConfig = {
+    apiKey: FIREBASE_API_KEY,
+    authDomain: FIREBASE_AUTH_DOMAIN,
+    projectId: FIREBASE_PROJECT_ID,
+    storageBucket: FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: FIREBASE_MESSAGING_SENDER_ID,
+    appId: FIREBASE_APP_ID,
+    measurementId: FIREBASE_MEASUREMENT_ID,
+  };
+
+  // Check if critical Firebase config variables are available
+  const isFirebaseConfigValid = !!(
+    firebaseConfig.apiKey &&
+    firebaseConfig.projectId &&
+    firebaseConfig.appId
+  );
+
+  // Log gathered config for debugging
   useEffect(() => {
-    if (!auth) {
+    console.log("DEBUG: AuthContext - APP_ID from process.env:", APP_ID);
+    console.log(
+      "DEBUG: AuthContext - Firebase Config from process.env:",
+      firebaseConfig
+    );
+    console.log(
+      "DEBUG: AuthContext - INITIAL_AUTH_TOKEN from process.env:",
+      INITIAL_AUTH_TOKEN ? "DEFINED" : "UNDEFINED"
+    );
+    console.log(
+      "DEBUG: AuthContext - isFirebaseConfigValid:",
+      isFirebaseConfigValid
+    );
+  }, [
+    APP_ID,
+    JSON.stringify(firebaseConfig),
+    INITIAL_AUTH_TOKEN,
+    isFirebaseConfigValid,
+  ]);
+
+  // Firebase initialization logic
+  useEffect(() => {
+    // Only proceed if Firebase config is valid
+    if (!isFirebaseConfigValid) {
       console.error(
-        "Firebase Auth is not available. Check AuthContext initialization."
+        "ERROR: AuthContext - Missing one or more critical Firebase environment variables (NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID). Firebase will not initialize."
       );
-      setLoading(false);
+      setLoading(false); // Stop loading, indicate error
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
+    let appInstance: FirebaseApp;
+
+    if (getApps().length === 0) {
+      try {
+        appInstance = initializeApp(firebaseConfig);
+        console.log("Firebase app initialized in AuthContext.");
+      } catch (initError: any) {
+        console.error(
+          "ERROR: AuthContext - Firebase initializeApp failed:",
+          initError.message,
+          initError
+        );
+        setLoading(false);
+        return;
+      }
+    } else {
+      appInstance = getApp();
+      console.log(
+        "Firebase app already initialized, retrieving existing instance in AuthContext."
+      );
+    }
+
+    const firebaseAuth = getAuth(appInstance);
+    const firestoreDb = getFirestore(appInstance);
+
+    setAuth(firebaseAuth);
+    setDb(firestoreDb);
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
       if (user) {
+        setCurrentUser(user);
         console.log("AuthContext: Auth State Changed - User is:", user.uid);
       } else {
-        console.log("AuthContext: Auth State Changed - No user is signed in.");
+        if (INITIAL_AUTH_TOKEN) {
+          // Use the process.env token
+          try {
+            await signInWithCustomToken(firebaseAuth, INITIAL_AUTH_TOKEN);
+            console.log("AuthContext: Signed in with custom token.");
+          } catch (error) {
+            console.error(
+              "AuthContext: Error signing in with custom token:",
+              error
+            );
+            try {
+              await signInAnonymously(firebaseAuth);
+              console.log(
+                "AuthContext: Signed in anonymously after custom token failed."
+              );
+            } catch (anonError) {
+              console.error(
+                "AuthContext: Error signing in anonymously:",
+                anonError
+              );
+            }
+          }
+        } else {
+          try {
+            await signInAnonymously(firebaseAuth);
+            console.log(
+              "AuthContext: Signed in anonymously (no custom token)."
+            );
+          } catch (anonError) {
+            console.error(
+              "AuthContext: Error signing in anonymously:",
+              anonError
+            );
+          }
+        }
+        setCurrentUser(firebaseAuth.currentUser);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isFirebaseConfigValid]); // Re-run only if config validity changes
 
-  const signIn = async (email: string, password: string) => {
-    if (!auth) throw new Error("Firebase Auth is not initialized.");
-    await signInWithEmailAndPassword(auth, email, password);
+  const signOutUser = async () => {
+    if (auth) {
+      await firebaseSignOut(auth);
+      setCurrentUser(null);
+    }
   };
 
-  const signOut = async () => {
-    if (!auth) throw new Error("Firebase Auth is not initialized.");
-    await firebaseSignOut(auth);
+  const signInAnonymouslyUser = async () => {
+    if (auth) {
+      await signInAnonymously(auth);
+      setCurrentUser(auth.currentUser);
+    }
   };
 
-  const registerUser = async (email: string, password: string) => {
-    // Implemented registerUser
-    if (!auth) throw new Error("Firebase Auth is not initialized.");
-    await createUserWithEmailAndPassword(auth, email, password);
+  const signInUser = async (email: string, password: string): Promise<User> => {
+    if (!auth) throw new Error("Auth service not initialized.");
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      setCurrentUser(userCredential.user);
+      return userCredential.user;
+    } catch (error) {
+      console.error("Error signing in with email/password:", error);
+      throw error;
+    }
   };
 
-  const value = {
-    currentUser,
-    loading,
-    signIn,
-    signOut,
-    registerUser, // Provided registerUser in the context value
+  const registerUser = async (
+    email: string,
+    password: string
+  ): Promise<User> => {
+    if (!auth) throw new Error("Auth service not initialized.");
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      setCurrentUser(userCredential.user);
+      return userCredential.user;
+    } catch (error) {
+      console.error("Error registering user:", error);
+      throw error;
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // Render a specific error message if config is clearly bad
+  if (!isFirebaseConfigValid) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-beaverNeutral-light p-4 text-center">
+        <h2 className="text-2xl font-bold text-error mb-4">
+          Configuration Error: Firebase Environment Variables Missing
+        </h2>
+        <p className="text-gray-700 mb-2">
+          Essential Firebase environment variables are not loaded.
+        </p>
+        <p className="text-gray-700 mb-2">
+          Please ensure your `.env.local` file (in the root of your `web`
+          directory) contains:
+        </p>
+        <pre className="bg-gray-100 p-4 rounded-md text-left text-sm font-mono whitespace-pre-wrap break-all my-4">
+          NEXT_PUBLIC_FIREBASE_API_KEY=
+          <span className="text-purple-600">your-api-key</span>
+          <br />
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+          <span className="text-purple-600">your-auth-domain</span>
+          <br />
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+          <span className="text-purple-600">your-project-id</span>
+          <br />
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+          <span className="text-purple-600">your-storage-bucket</span>
+          <br />
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+          <span className="text-purple-600">your-messaging-sender-id</span>
+          <br />
+          NEXT_PUBLIC_FIREBASE_APP_ID=
+          <span className="text-purple-600">your-firebase-app-id</span>
+          <br />
+          {/* Optional: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXX */}
+          {/* Optional: NEXT_PUBLIC_INITIAL_AUTH_TOKEN=your-custom-token */}
+        </pre>
+        <p className="text-sm text-gray-500">
+          Restart your development server after creating/updating the
+          `.env.local` file.
+        </p>
+      </div>
+    );
+  }
+
+  // Show a general loading message while authentication is in progress
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-beaverNeutral-light">
+        Initializing authentication...
+      </div>
+    );
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        loading,
+        db,
+        auth,
+        signOut: signOutUser,
+        signInAnonymously: signInAnonymouslyUser,
+        signInUser,
+        registerUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };

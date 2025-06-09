@@ -1,102 +1,79 @@
 // web/src/app/login/page.tsx
-"use client"; // Marks this file as a client component
+"use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../contexts/AuthContext"; // Import the AuthContext
-import MessageModal from "../components/MessageModal"; // For user messages
+import { useAuth } from "../contexts/AuthContext";
+import MessageModal from "../components/MessageModal"; // Import the MessageModal
+import Link from "next/link"; // Import Link for navigation
 
 export default function LoginPage() {
+  // CORRECTED: Destructure signInUser and registerUser
+  const { currentUser, loading, signInUser, registerUser } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false); // State to toggle between login and register
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState<"success" | "error" | "confirm">(
     "success"
   );
-  const [showRegisterForm, setShowRegisterForm] = useState(false); // State to toggle between login and register forms
 
-  // Destructure registerUser from useAuth hook
-  const { currentUser, loading, signIn, registerUser } = useAuth();
-  const router = useRouter();
-
-  // Redirect if the user is already authenticated
   useEffect(() => {
     if (!loading && currentUser) {
-      router.push("/dashboard"); // Redirect to /dashboard
+      router.push("/dashboard"); // Redirect to dashboard if already logged in
     }
   }, [currentUser, loading, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      showMessageModal("Please enter both email and password.", "error");
-      return;
-    }
+    setModalMessage(""); // Clear previous messages
+
+    if (loading) return; // Prevent actions if auth is still loading
 
     try {
-      await signIn(email, password);
-      showMessageModal(
-        "Login successful! Redirecting to dashboard...",
-        "success"
-      );
-      // The actual redirection happens in the useEffect
+      if (isRegistering) {
+        await registerUser(email, password); // Use registerUser
+        showMessageModal(
+          "Registration successful! You are now logged in.",
+          "success"
+        );
+      } else {
+        await signInUser(email, password); // Use signInUser
+        showMessageModal("Login successful!", "success");
+      }
+      // Redirection handled by useEffect if currentUser is updated
     } catch (error: any) {
-      console.error("Login failed:", error);
-      let errorMessage = "Login failed. Please check your credentials.";
+      console.error("Authentication error:", error);
+      let errorMessage = "An unexpected error occurred. Please try again.";
       if (error.code) {
         switch (error.code) {
+          case "auth/invalid-email":
+            errorMessage = "Invalid email address format.";
+            break;
+          case "auth/user-disabled":
+            errorMessage = "Your account has been disabled.";
+            break;
           case "auth/user-not-found":
-          case "auth/wrong-password":
+          case "auth/wrong-password": // For signIn
+          case "auth/invalid-credential": // More generic for both
             errorMessage = "Invalid email or password.";
             break;
-          case "auth/invalid-email":
-            errorMessage = "The email address is not valid.";
-            break;
-          case "auth/too-many-requests":
-            errorMessage = "Too many login attempts. Please try again later.";
-            break;
-          default:
-            errorMessage = `Login error: ${error.message}`;
-        }
-      }
-      showMessageModal(errorMessage, "error");
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      showMessageModal(
-        "Please enter both email and password for registration.",
-        "error"
-      );
-      return;
-    }
-
-    try {
-      await registerUser(email, password); // Use the registerUser function from AuthContext
-      showMessageModal("Registration successful! Please log in.", "success");
-      setShowRegisterForm(false); // Switch back to login form after successful registration
-      setEmail(""); // Clear form
-      setPassword(""); // Clear form
-    } catch (error: any) {
-      console.error("Registration failed:", error);
-      let errorMessage = "Registration failed. Please try again.";
-      if (error.code) {
-        switch (error.code) {
           case "auth/email-already-in-use":
-            errorMessage =
-              "The email address is already in use by another account.";
-            break;
-          case "auth/invalid-email":
-            errorMessage = "The email address is not valid.";
+            errorMessage = "This email is already in use. Try logging in.";
             break;
           case "auth/weak-password":
-            errorMessage = "Password should be at least 6 characters.";
+            errorMessage =
+              "Password is too weak. It should be at least 6 characters.";
+            break;
+          case "auth/operation-not-allowed":
+            errorMessage =
+              "Email/password authentication is not enabled. Contact support.";
             break;
           default:
-            errorMessage = `Registration error: ${error.message}`;
+            errorMessage = `Authentication failed: ${error.message}`;
+            break;
         }
       }
       showMessageModal(errorMessage, "error");
@@ -116,88 +93,87 @@ export default function LoginPage() {
     setIsModalOpen(false);
   };
 
-  if (loading || currentUser) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-beaverNeutral-light">
-        Loading...
+        <p className="text-beaverNeutral">Loading authentication status...</p>
       </div>
     );
   }
 
+  // If currentUser exists, useEffect will redirect, so no need to render login page
+  if (currentUser && !loading) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-beaverNeutral-light p-4">
+    <div className="min-h-screen flex items-center justify-center bg-beaverNeutral-light">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-3xl font-bold text-beaverBlue-dark text-center mb-6">
-          {showRegisterForm
-            ? "Register for BeaverOS Admin"
-            : "Login to BeaverOS Admin"}
+        <h2 className="text-3xl font-bold text-center text-beaverBlue-dark mb-6">
+          {isRegistering ? "Register for BeaverOS" : "Login to BeaverOS"}
         </h2>
-        <form onSubmit={showRegisterForm ? handleRegister : handleLogin}>
+        <form onSubmit={handleAuth}>
           <div className="mb-4">
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-gray-700 text-sm font-medium mb-2"
             >
               Email
             </label>
             <input
               type="email"
               id="email"
-              name="email"
+              className="w-full p-3 rounded-md border border-beaverBlue-light focus:outline-none focus:ring-2 focus:ring-beaverBlue bg-beaverBlue-very_light text-gray-900"
+              placeholder="your@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
-              className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               required
             />
           </div>
           <div className="mb-6">
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-gray-700 text-sm font-medium mb-2"
             >
               Password
             </label>
             <input
               type="password"
               id="password"
-              name="password"
+              className="w-full p-3 rounded-md border border-beaverBlue-light focus:outline-none focus:ring-2 focus:ring-beaverBlue bg-beaverBlue-very_light text-gray-900"
+              placeholder="********"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              // Changed bg-beaverBlue-light to bg-beaverBlue-very_light
-              className="mt-1 block w-full rounded-md border border-beaverBlue-light shadow-sm focus:border-beaverBlue-dark focus:ring-beaverBlue sm:text-sm p-2 placeholder-gray-400 bg-beaverBlue-very_light text-gray-900"
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-beaverBlue hover:bg-beaverBlue-dark text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors transform hover:scale-105"
+            className="w-full bg-beaverBlue hover:bg-beaverBlue-dark text-white font-bold py-3 rounded-lg transition-colors shadow-md"
           >
-            {showRegisterForm ? "Register" : "Log In"}
+            {isRegistering ? "Register" : "Login"}
           </button>
         </form>
+
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => setIsRegistering(!isRegistering)}
+            className="text-beaverBlue hover:underline text-sm"
+          >
+            {isRegistering
+              ? "Already have an account? Login here."
+              : "Don't have an account? Register here."}
+          </button>
+        </div>
+
+        {/* Optional: Go to Demo Link */}
         <div className="mt-4 text-center">
-          {showRegisterForm ? (
-            <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <button
-                onClick={() => setShowRegisterForm(false)}
-                className="text-beaverBlue hover:text-beaverBlue-dark font-medium focus:outline-none"
-              >
-                Log In
-              </button>
-            </p>
-          ) : (
-            <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <button
-                onClick={() => setShowRegisterForm(true)}
-                className="text-beaverBlue hover:text-beaverBlue-dark font-medium focus:outline-none"
-              >
-                Register
-              </button>
-            </p>
-          )}
+          <p className="text-gray-600">
+            Or, if you just want to try the POS demo:
+            <Link href="/demo" className="text-beaverBlue hover:underline ml-1">
+              Go to Demo
+            </Link>
+          </p>
         </div>
       </div>
 
@@ -206,6 +182,7 @@ export default function LoginPage() {
         message={modalMessage}
         type={modalType}
         onClose={handleCloseModal}
+        // No confirm action for login/register modals
       />
     </div>
   );

@@ -1,24 +1,23 @@
-// web/src/app/components/ProductTable.tsx
+// web/src/app/components/CustomerTable.tsx
 import React from "react";
-// CORRECTED PATH: Changed '../../data/admin-products' to '../data/admin-products'
-import { AdminProduct } from "../data/admin-products";
+import { Customer } from "../data/customers"; // CORRECTED: Changed '../../data/customers' to '../data/customers'
 
-interface ProductTableProps {
-  products: AdminProduct[];
-  onEdit: (product: AdminProduct) => void;
-  onDelete: (productId: string, productName: string) => void;
+interface CustomerTableProps {
+  customers: Customer[];
+  onEdit: (customer: Customer) => void;
+  onDelete: (customerId: string, customerName: string) => void;
 }
 
-const ProductTable: React.FC<ProductTableProps> = ({
-  products,
+const CustomerTable: React.FC<CustomerTableProps> = ({
+  customers,
   onEdit,
   onDelete,
 }) => {
   return (
     <div className="overflow-x-auto bg-white shadow-lg rounded-lg p-4">
-      {products.length === 0 ? (
+      {customers.length === 0 ? (
         <p className="text-center text-gray-500 py-4">
-          No products found. Add a new one to get started!
+          No customers found. Add a new one to get started!
         </p>
       ) : (
         <table className="min-w-full divide-y divide-gray-200">
@@ -28,16 +27,16 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-beaverNeutral-dark uppercase tracking-wider">
-                Category
+                Email
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-beaverNeutral-dark uppercase tracking-wider">
-                Price
+                Phone
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-beaverNeutral-dark uppercase tracking-wider">
-                Stock
+                Loyalty Points
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-beaverNeutral-dark uppercase tracking-wider">
-                Active
+                Last Updated
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-beaverNeutral-dark uppercase tracking-wider rounded-tr-lg">
                 Actions
@@ -45,32 +44,43 @@ const ProductTable: React.FC<ProductTableProps> = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {products.map((product) => (
-              <tr key={product.id} className="hover:bg-gray-50">
+            {customers.map((customer, index) => (
+              // IMPORTANT: Removed whitespace/newlines directly between <tr> and <td> tags
+              <tr
+                key={customer.id || `temp-${index}-${crypto.randomUUID()}`}
+                className="hover:bg-gray-50"
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {product.icon} {product.name}
+                  {customer.firstName} {customer.lastName}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {product.category}
+                  {customer.email}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${product.price.toFixed(2)}
+                  {customer.phone || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {product.stock}
+                  {customer.loyaltyPoints || 0}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {product.isActive ? "Yes" : "No"}
+                  {customer.lastUpdated
+                    ? new Date(customer.lastUpdated).toLocaleDateString()
+                    : "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
-                    onClick={() => onEdit(product)}
+                    onClick={() => onEdit(customer)}
                     className="text-beaverBlue hover:text-beaverBlue-dark px-2 py-1 rounded-md transition-colors mr-2"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => onDelete(product.id, product.name)}
+                    onClick={() =>
+                      onDelete(
+                        customer.id,
+                        `${customer.firstName} ${customer.lastName}`
+                      )
+                    }
                     className="text-error hover:text-error-dark px-2 py-1 rounded-md transition-colors"
                   >
                     Delete
@@ -85,4 +95,4 @@ const ProductTable: React.FC<ProductTableProps> = ({
   );
 };
 
-export default ProductTable;
+export default CustomerTable;

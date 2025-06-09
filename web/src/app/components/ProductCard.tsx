@@ -1,51 +1,128 @@
-// src/app/components/ProductCard.tsx
-'use client';
-import React from 'react';
-import Image from 'next/image';
-import { Product } from '../data/products';
+// web/src/app/data/products.ts
+// Defines data interfaces for products in the admin panel and potentially the POS/frontend.
+// This structure will align with data stored in Firebase Firestore.
 
-interface ProductCardProps {
-  product: Product;
-  onAddToCart: (product: Product) => void;
+// Interface for a general product (might be used for frontend display)
+// Ensure this is EXPORTED
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  imageUrl?: string; // Optional primary image URL
+  icon?: string; // Optional icon, e.g., emoji for POS display
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
-  return (
-    <div className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-between text-center transform transition-transform duration-200 hover:scale-105 min-h-[300px] pb-4">
-      {/* Product Image */}
-      <div className="w-24 h-24 mb-3 overflow-hidden rounded-full border-2 border-beaverBlue-light flex items-center justify-center bg-gray-200">
-        <Image
-          src={product.image}
-          alt={product.name}
-          width={96}
-          height={96}
-          className="object-cover rounded-full"
-          onError={(e) => {
-            e.currentTarget.src = `https://placehold.co/96x96/6B7280/FFFFFF?text=${product.name.substring(0, 5)}&format=png`
-          }}
-        />
-      </div>
+// Interface for an Admin Product (more detailed, including inventory and management fields)
+// This is the primary interface used in our admin panel.
+export interface AdminProduct extends Product {
+  // Extends the base Product interface
+  costPrice: number;
+  stock: number;
+  sku: string;
+  barcode?: string; // Optional barcode
+  supplierId?: string; // Optional supplier reference
+  images?: ProductImage[]; // Array of additional images
+  variants?: ProductVariant[]; // Array of product variants (e.g., size, color)
+  isActive: boolean; // Whether the product is active/available
+  createdAt: string; // ISO string timestamp
+  lastUpdated: string; // ISO string timestamp
+}
 
-      {/* Product Name */}
-      <h3 className="text-lg font-semibold text-beaverNeutral-dark mb-1 flex-grow-0">
-        {product.name}
-      </h3>
+// Interface for individual product images
+export interface ProductImage {
+  id: string; // Unique ID for the image (e.g., crypto.randomUUID())
+  url: string; // URL of the image
+  altText?: string; // Alt text for accessibility
+  isThumbnail?: boolean; // Whether this image is the primary thumbnail
+}
 
-      {/* Product Price */}
-      <p className="text-beaverBlue font-bold text-xl mb-3 flex-grow-0">
-        ${product.price.toFixed(2)}
-      </p>
+// Interface for product variants (e.g., Color: Red, Size: M)
+export interface ProductVariant {
+  id: string; // Unique ID for the variant
+  name: string; // e.g., "Color", "Size"
+  value: string; // e.g., "Red", "Large"
+  stock: number; // Stock specific to this variant
+}
 
-      {/* Add to Cart Button */}
-      <button
-        type="button"
-        onClick={() => onAddToCart(product)}
-        className="mt-auto bg-beaverBlue hover:bg-beaverBlue-dark text-beaverNeutral-dark font-semibold py-2 px-4 rounded-lg transition-colors w-full cursor-pointer"
-      >
-        Add to Cart
-      </button>
-    </div>
-  );
-};
-
-export default ProductCard;
+// Sample data for demonstration/initial state if Firestore is empty or fails
+export const SAMPLE_ADMIN_PRODUCTS: AdminProduct[] = [
+  {
+    id: "prod_1",
+    name: "Espresso Blend Coffee",
+    description:
+      "A rich and aromatic blend, perfect for espresso. Notes of dark chocolate and caramel.",
+    category: "Coffee Beans",
+    price: 18.5,
+    costPrice: 10.0,
+    stock: 150,
+    sku: "COF-ESPB001",
+    barcode: "1234567890123",
+    supplierId: "SUP001",
+    imageUrl:
+      "[https://placehold.co/400x400/FF0000/FFFFFF?text=Coffee+Blend](https://placehold.co/400x400/FF0000/FFFFFF?text=Coffee+Blend)",
+    icon: "☕",
+    isActive: true,
+    createdAt: "2025-01-01T10:00:00Z",
+    lastUpdated: "2025-06-01T14:30:00Z",
+    images: [
+      {
+        id: "img_1_a",
+        url: "[https://placehold.co/400x400/FF0000/FFFFFF?text=Coffee+Blend+1](https://placehold.co/400x400/FF0000/FFFFFF?text=Coffee+Blend+1)",
+        altText: "Espresso Blend bag",
+        isThumbnail: true,
+      },
+      {
+        id: "img_1_b",
+        url: "[https://placehold.co/400x400/00FF00/000000?text=Coffee+Bean+2](https://placehold.co/400x400/00FF00/000000?text=Coffee+Bean+2)",
+        altText: "Roasted coffee beans",
+        isThumbnail: false,
+      },
+    ],
+    variants: [
+      { id: "var_1_a", name: "Weight", value: "250g", stock: 100 },
+      { id: "var_1_b", name: "Weight", value: "1kg", stock: 50 },
+    ],
+  },
+  {
+    id: "prod_2",
+    name: "French Croissant",
+    description: "Classic buttery, flaky pastry, baked fresh daily.",
+    category: "Pastries",
+    price: 3.25,
+    costPrice: 1.5,
+    stock: 80,
+    sku: "PAS-CROS001",
+    barcode: "1234567890124",
+    supplierId: "SUP002",
+    imageUrl:
+      "[https://placehold.co/400x400/FFFF00/000000?text=Croissant](https://placehold.co/400x400/FFFF00/000000?text=Croissant)",
+    icon: "🥐",
+    isActive: true,
+    createdAt: "2025-01-05T08:00:00Z",
+    lastUpdated: "2025-06-05T09:00:00Z",
+    images: [],
+    variants: [],
+  },
+  {
+    id: "prod_3",
+    name: "Organic Green Tea",
+    description: "Delicate and refreshing organic green tea leaves.",
+    category: "Tea",
+    price: 12.0,
+    costPrice: 6.0,
+    stock: 200,
+    sku: "TEA-OGT001",
+    barcode: "1234567890125",
+    supplierId: "SUP001",
+    imageUrl:
+      "[https://placehold.co/400x400/0000FF/FFFFFF?text=Green+Tea](https://placehold.co/400x400/0000FF/FFFFFF?text=Green+Tea)",
+    icon: "🍵",
+    isActive: false, // Example of an inactive product
+    createdAt: "2025-02-10T11:00:00Z",
+    lastUpdated: "2025-02-10T11:00:00Z",
+    images: [],
+    variants: [],
+  },
+];
